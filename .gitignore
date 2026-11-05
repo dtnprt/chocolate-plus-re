@@ -1,0 +1,26 @@
+# Third-party / copyrighted material: vendor apps (APKs, decompiled sources), JieLi SDK + toolchains,
+# stock firmware, decrypted/disassembled/decompiled stock firmware, vendor tools, manuals, reference photos.
+thirdparty/
+
+# Firmware binaries: our builds are the stock M-VAVE firmware with patches, i.e. they contain vendor code.
+# They are reproducible from thirdparty/stock_firmware with firmware/build.py.
+*.fwsc
+*.ufw
+firmware/out/
+website/firmware/
+_archive/
+
+# Local clone of the GitHub Pages repo used by tools/deploy_site.py
+.deploy_pages/
+
+# Build outputs / caches
+android/build/
+__pycache__/
+*.pyc
+
+# Assembler intermediates (regenerate with firmware/patch_src/asm_greet.sh)
+*.o
+firmware/patch_src/*.elf
+
+# Claude Code local settings
+.claude/settings.local.json

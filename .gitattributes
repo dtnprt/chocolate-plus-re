@@ -1,0 +1,6 @@
+# Shell scripts and git hooks must keep LF line endings (core.autocrlf would break the shebang)
+*.sh            text eol=lf
+*.command       text eol=lf
+tools/hooks/*   text eol=lf
+# Windows batch files
+*.bat           text eol=crlf
