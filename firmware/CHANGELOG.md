@@ -1,7 +1,7 @@
 # FootCtrlPlus custom firmware – Changelog
 
 Base: stock M-VAVE **FootCtrlPlus 012** (Android build, JieLi AC636N).
-Current: **FootCtrlPlus 141-dtnprt** (version 14, build 1) → `out/FootCtrlPlus_141-dtnprt.fwsc` (flash with SincoOTA).
+Current: **FootCtrlPlus 141-dtnprt** (version 14, build 1) → `FootCtrlPlus_141-dtnprt.fwsc`, built with `build.py` from the original 012 (flash with SincoOTA).
 
 Version scheme: `<version><build>` as 3 digits, e.g. `141` = version 14, build 1. It appears on the display,
 in the name/version reply and in the `.fwsc` metadata.
@@ -83,7 +83,7 @@ Shown on power-on, then the normal screen:
 ## Known limits and notes
 - **Updating:** use SincoOTA (Bluetooth), with the pedal **not paired** to the phone.
   If it's left in update mode, use SincoOTA's *Mandatory upgrade*.
-- **Recovery:** flash stock `FootCtrlPlus_012.fwsc` (in `../../third-party/stock_firmware/vendor_download/`) with SincoOTA.
+- **Recovery:** flash the original `FootCtrlPlus_012.fwsc` (M-VAVE download) with SincoOTA.
 - **Web Bluetooth flasher** (`../flasher/web`): auth and phase 1 work. Reconnecting for phase 2 from Windows is unreliable, so use SincoOTA.
 - **Flash space is almost full.** Only unreferenced functions and 0xff padding are used for new code.
   `0x1e04a84` must never be reused (pairing records).

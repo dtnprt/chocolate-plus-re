@@ -23,8 +23,10 @@ chocolate-re/
 ## Workflow
 - Work on branch `dev`; `main` holds releases. Pushing `main` to `origin` also deploys `website/` into
   `../pages/chocolate/` and pushes the Pages repo (needs `git config core.hooksPath tools/hooks` once per clone).
-- Build: `python -I firmware/build.py` -> `firmware/out/FootCtrlPlus_<VERSION>-dtnprt.fwsc`
-  (needs `../third-party/stock_firmware/FootCtrlPlus_012.ufw`). Flash with SincoOTA, pedal not paired.
+- Build: `python -I firmware/build.py <FootCtrlPlus_012.fwsc> [-o <folder>] [--extras]` -> `FootCtrlPlus_<VERSION>-dtnprt.fwsc`.
+  The input must be the original M-VAVE firmware 012 (https://www.cuvave.com/product?id=chocolate-plus), checked by SHA-256.
+  Local builds go to the parent repo: `python -I firmware/build.py ../third-party/stock_firmware/FootCtrlPlus_012.ufw -o ../firmware/out --extras`.
+  No firmware binaries in this repo or on the website. Flash with SincoOTA, pedal not paired.
 
 ## Version numbers
 Three digits `<version><build>`, numbers only (SincoOTA/CubeSuite parse digits). Every build gets a new number.

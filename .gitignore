@@ -2,7 +2,7 @@
 # sources, JieLi SDK + toolchains, stock firmware and its disassembly, vendor tools, manuals, photos).
 
 # Firmware binaries: our builds are the stock M-VAVE firmware with patches, i.e. they contain vendor code.
-# They are reproducible from ../third-party/stock_firmware with firmware/build.py.
+# Build them from the original M-VAVE firmware 012 with firmware/build.py; local builds live in the parent repo (../firmware).
 *.fwsc
 *.ufw
 firmware/out/

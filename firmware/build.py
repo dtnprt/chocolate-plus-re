@@ -1,6 +1,18 @@
 #!/usr/bin/env python3
 """
-Build FootCtrlPlus firmware with fast footswitch response.
+Build the dtnprt custom firmware for the M-VAVE Chocolate Plus (FootCtrlPlus) by patching the
+original M-VAVE firmware 012.
+
+Usage:
+    python build.py FootCtrlPlus_012.fwsc            # writes FootCtrlPlus_141-dtnprt.fwsc to the current folder
+    python build.py FootCtrlPlus_012.fwsc -o <folder>
+
+The original firmware file is not included here. Download it from M-VAVE:
+https://www.cuvave.com/product?id=chocolate-plus
+The script checks that the file you give it is exactly the original firmware 012 (SHA-256)
+and refuses any other file.
+
+Technical background:
 
 Root cause (stock 012, poll fn 0x1e11cf2, run every 5 ms via timer_add(fn,5)):
   per switch: state 0 (idle) --pressed D=4 consecutive ticks--> state 0x64 (pending, counter=0)
@@ -20,9 +32,23 @@ Applied to both flash.bin (chunk 0) and flash2.bin (chunk 5, OTA bank: identical
 CRC chain per bank: app.bin data/head CRC, app_area_head data/head CRC, ufw chunk CRC,
 ufw table+header CRC.
 """
-import sys, os, struct
+import sys, os, struct, hashlib, argparse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # fwsctool.py lives next to this script
-from fwsctool import xcode_block, crc16, member_decrypt, fwsc_wrap, fix_header_crc, decode_header
+from fwsctool import xcode_block, crc16, member_decrypt, fwsc_wrap, fwsc_unwrap, fix_header_crc, decode_header
+
+STOCK_URL = 'https://www.cuvave.com/product?id=chocolate-plus'
+# The one accepted input: original M-VAVE firmware 012, as .fwsc (vendor download) or the .ufw inside it.
+STOCK_SHA256 = {
+    '9deb9d90691415aa7f4514103842237a1500c681db34fe35e5f5136d173cb3bc': 'fwsc',   # FootCtrlPlus_012.fwsc
+    'f2aad57cef8f8eb16bb97d1a8315780b5b6e8ca0254ec5514cd243c1bcc9971d': 'ufw',    # FootCtrlPlus_012.ufw
+}
+# Files that are often picked by mistake, for a helpful error message.
+KNOWN_OTHER = {
+    'b5ba2041482640315c7dc70a0f7c79c9e81d24989226763868dc36dab81801c3': 'the original firmware 013',
+    'fb479aa2da0efe27e7c92581884171bce0694e41a912a5d755a520129705f837': 'the already patched custom firmware 141',
+}
+# SHA-256 of the result with the settings in main(): shows that a build is identical to the official one.
+EXPECTED_SHA256 = {'FootCtrlPlus_141-dtnprt.fwsc': 'fb479aa2da0efe27e7c92581884171bce0694e41a912a5d755a520129705f837'}
 
 KEY, POS = 0x180f, 0x20000          # correct app-area cipher params
 UBOOT = 0x1000                      # plaintext boot header in front of app area
@@ -136,8 +162,32 @@ def patch_member(member, D, F, tapfix, ident=None, greeting=None):
     assert len(new) == len(member)
     return new, bytes(d)
 
-def build(src_ufw, out_dir, tag, D, F, tapfix=True, version=14, ident='FootCtrlPlus_014-dtnprt', greeting=None, suffix=''):
-    ufw = bytearray(open(src_ufw, 'rb').read())
+class WrongFile(Exception):
+    pass
+
+def load_stock(path):
+    """Read the user's file and return the stock .ufw image, or raise WrongFile with a clear reason."""
+    if not os.path.isfile(path):
+        raise WrongFile(f'file not found: {path}')
+    data = open(path, 'rb').read()
+    digest = hashlib.sha256(data).hexdigest()
+    kind = STOCK_SHA256.get(digest)
+    if kind == 'ufw':
+        return data
+    if kind == 'fwsc':
+        ufw = fwsc_unwrap(data, '')
+        assert STOCK_SHA256.get(hashlib.sha256(ufw).hexdigest()) == 'ufw', 'unwrapped image does not match'
+        return ufw
+    if digest in KNOWN_OTHER:
+        raise WrongFile(f'{os.path.basename(path)} is {KNOWN_OTHER[digest]}, not the original firmware 012.')
+    raise WrongFile(f'{os.path.basename(path)} is not the original M-VAVE firmware 012 (FootCtrlPlus_012.fwsc).\n'
+                    f'  got:      {len(data)} bytes, SHA-256 {digest}\n'
+                    f'  expected: 583476 bytes, SHA-256 {next(iter(STOCK_SHA256))}\n'
+                    f'  The file may be incomplete, damaged, or a different firmware version.')
+
+def build(stock_ufw, out_dir, tag, D, F, tapfix=True, version=14, ident='FootCtrlPlus_014-dtnprt', greeting=None,
+          suffix='', extras=False):
+    ufw = bytearray(stock_ufw)
     cnt = decode_header(ufw)['count']
     def rd(i): return bytearray(xcode_block(bytes(ufw[0x40+i*0x50:0x40+(i+1)*0x50])))
     def wr(i, e): ufw[0x40+i*0x50:0x40+(i+1)*0x50] = xcode_block(bytes(e))
@@ -157,16 +207,27 @@ def build(src_ufw, out_dir, tag, D, F, tapfix=True, version=14, ident='FootCtrlP
     h = decode_header(ufw); assert h['stored_crc'] == h['calc_crc']
     os.makedirs(out_dir, exist_ok=True)
     base = os.path.join(out_dir, f'FootCtrlPlus_{version:03d}{suffix}' + (f'_{tag}' if tag else ''))
-    open(base + '.ufw', 'wb').write(ufw)
     open(base + '.fwsc', 'wb').write(fwsc_wrap(ufw, 'FootCtrlPlus', version, suffix))
-    open(base + '_app.bin', 'wb').write(plains['flash.bin'])   # decrypted app area, for disasm check
-    print(f"{tag}: D={D} F={F} tapfix={tapfix} ident={ident} greeting={greeting}+battery -> {base}.fwsc")
+    if extras:
+        open(base + '.ufw', 'wb').write(ufw)
+        open(base + '_app.bin', 'wb').write(plains['flash.bin'])   # decrypted app area, for disasm check
     return base
 
-if __name__ == '__main__':
-    root = os.path.dirname(os.path.abspath(__file__))
-    src = os.path.join(root, '..', '..', 'third-party', 'stock_firmware', 'FootCtrlPlus_012.ufw')   # stock build input (vendor)
-    out = os.path.join(root, 'out')
+def main():
+    ap = argparse.ArgumentParser(description='Patch the original M-VAVE Chocolate Plus firmware 012 into the '
+                                             'dtnprt custom firmware.', epilog=f'Original firmware: {STOCK_URL}')
+    ap.add_argument('stock', help='the original firmware file FootCtrlPlus_012.fwsc (or the .ufw inside it)')
+    ap.add_argument('-o', '--out', default='.', help='output folder (default: current folder)')
+    ap.add_argument('--extras', action='store_true', help='also write the .ufw and the decrypted app area (_app.bin)')
+    args = ap.parse_args()
+
+    try:
+        stock = load_stock(args.stock)
+    except WrongFile as e:
+        print(f'ERROR: {e}\nDownload the original firmware 012 from {STOCK_URL}', file=sys.stderr)
+        return 1
+    print(f'OK: {os.path.basename(args.stock)} is the original firmware 012')
+
     # version scheme: <version><build>, e.g. 141 = version 14, build 1 (3 digits: shown on the display,
     # in the name/version reply and in the .fwsc metadata)
     VERSION = 141
@@ -179,4 +240,18 @@ if __name__ == '__main__':
     GREETING = (SCROLL, FRAMES, MODE_KEY)
     # footswitch timing: debounce D=3, combo window F=6 ticks of 5 ms (~40-45 ms press latency, 30 ms combo window)
     SUFFIX = '-dtnprt'            # file name / .fwsc metadata: FootCtrlPlus_141-dtnprt.fwsc
-    build(src, out, '', D=3, F=6, version=VERSION, ident=f'FootCtrlPlus_{VERSION:03d}{SUFFIX}', greeting=GREETING, suffix=SUFFIX)
+    base = build(stock, args.out, '', D=3, F=6, version=VERSION, ident=f'FootCtrlPlus_{VERSION:03d}{SUFFIX}',
+                 greeting=GREETING, suffix=SUFFIX, extras=args.extras)
+
+    out = base + '.fwsc'
+    digest = hashlib.sha256(open(out, 'rb').read()).hexdigest()
+    print(f'written: {out}\nSHA-256: {digest}')
+    expected = EXPECTED_SHA256.get(os.path.basename(out))
+    if expected == digest:
+        print('Identical to the official build. Flash it with SincoOTA (do not rename the file).')
+    elif expected:
+        print('WARNING: differs from the official build (were the settings changed?).')
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())

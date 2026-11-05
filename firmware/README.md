@@ -3,13 +3,13 @@
 Everything needed to rebuild the custom firmware from the stock image.
 
 ```
-build.py          patches the stock image and writes out/FootCtrlPlus_141.{fwsc,ufw}
+build.py          patches the original firmware 012 (checked by SHA-256) and writes FootCtrlPlus_141-dtnprt.fwsc
 fwsctool.py       .fwsc/.ufw container, LFSR member cipher, CRC16 (imported by build.py)
-../../third-party/stock_firmware/FootCtrlPlus_012.ufw - stock Android firmware, the build input (vendor, not in git)
+FootCtrlPlus_012.fwsc (or the .ufw inside it) - original M-VAVE firmware, the build input (vendor, not in git):
+                  https://www.cuvave.com/product?id=chocolate-plus
 patch_src/        cave.s + link.ld      - source of the 24-byte tap-fix code cave (pi32v2 asm)
                   greet.s + greet.ld    - boot greeting; asm_greet.sh assembles it (bytes are embedded in build.py)
                   dis.sh                - objdump check of patched images (WSL JieLi toolchain)
-out/              build results; flash the .fwsc with SincoOTA
 ../../third-party/firmware_reference/  correct decryption of the stock app area (vendor code, not in git):
                   app_area_decrypted.bin (offset 0 = vaddr 0x01e00000), app_code.elf (ET_EXEC @0x01e00120),
                   app_disasm.txt (objdump), app_decompiled.c (Ghidra pseudo-C), app_strings.txt, func_targets.txt
@@ -17,10 +17,17 @@ out/              build results; flash the .fwsc with SincoOTA
 
 ## Build
 ```
-python -I build.py
+python build.py FootCtrlPlus_012.fwsc              # -> ./FootCtrlPlus_141-dtnprt.fwsc
+python build.py FootCtrlPlus_012.fwsc -o <folder>  # other output folder
+python build.py FootCtrlPlus_012.fwsc --extras     # also the .ufw and the decrypted app area (_app.bin)
 ```
-Self-checks on every run: stock CRCs must verify, the app-area CRC chain must reproduce the stock values,
-every patch site must contain the expected original bytes. Result: `out/FootCtrlPlus_141-dtnprt.fwsc`.
+The input is checked first: only the original firmware 012 is accepted (`FootCtrlPlus_012.fwsc` SHA-256
+`9deb9d90691415aa7f4514103842237a1500c681db34fe35e5f5136d173cb3bc`, or the `.ufw` inside it). Other versions,
+damaged downloads and already patched files are refused with an explanation.
+Further self-checks on every run: stock CRCs must verify, the app-area CRC chain must reproduce the stock values,
+every patch site must contain the expected original bytes. The result is compared with the official build
+(`FootCtrlPlus_141-dtnprt.fwsc` SHA-256 `fb479aa2da0efe27e7c92581884171bce0694e41a912a5d755a520129705f837`).
+Step-by-step guide for users: https://dtnprt.github.io/chocolate/firmware/#build
 
 ## What it patches (in both flash.bin and flash2.bin)
 | Patch | Where | Stock | Custom |
@@ -42,7 +49,7 @@ Press latency: ~95 ms stock, ~45 ms custom. A+B / C+D combos still work (30 ms w
 - Then: member CRC in the .ufw directory entry, table CRC and header CRC (`fix_header_crc`), `.fwsc` wrap.
 
 ## Flashing / recovery
-Flash `out/*.fwsc` with SincoOTA (Android). Stock recovery: `../../third-party/stock_firmware/vendor_download/FootCtrlPlus_012.fwsc` with SincoOTA.
+Flash the built `.fwsc` with SincoOTA (Android). Stock recovery: the original `FootCtrlPlus_012.fwsc` with SincoOTA.
 If the pedal is stuck in update/download mode: SincoOTA → *Mandatory upgrade*.
 
 ## Display internals (for further changes)
