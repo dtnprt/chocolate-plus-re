@@ -6,7 +6,6 @@
 *.fwsc
 *.ufw
 firmware/out/
-website/firmware/
 _archive/
 
 # Build outputs / caches
