@@ -1,4 +1,6 @@
-# Chocolate Plus (M-VAVE FootCtrlPlus) – reverse engineering & custom firmware
+# Chocolate Plus (M-VAVE FootCtrlPlus) â€“ reverse engineering & custom firmware
+
+Modded Firmware for the M-VAVE Chocolate Plus MIDI Controller.
 
 ```
 firmware/     custom firmware build (build.py, patch sources, CHANGELOG.md, README.md)
@@ -26,6 +28,6 @@ chocolate-re/
 
 ## Version numbers
 Three digits `<version><build>`, numbers only (SincoOTA/CubeSuite parse digits). Every build gets a new number.
-- **Release** versions have an **even** version number: 140–149, then 160–169, 180–189 …
-- **Dev** versions have an **odd** version number: 150–159, then 170–179, 190–199 …
+- **Release** versions have an **even** version number: 140â€“149, then 160â€“169, 180â€“189 â€¦
+- **Dev** versions have an **odd** version number: 150â€“159, then 170â€“179, 190â€“199 â€¦
 - The last digit is the build. After x9 the next number of the same kind follows (149 -> 160, 159 -> 170).
