@@ -1,8 +1,8 @@
 # CubeSuite.apk – analysis
 
 Package `com.cubeSuite`, versionCode `20260511031149`, minSdk 15. Not obfuscated.
-- Raw APK contents: `thirdparty/apps/CubeSuite_extracted/`
-- Java sources (jadx 1.5.6): `thirdparty/apps/CubeSuite_decompiled/sources/com/cubeSuite/` (74 methods failed to decompile cleanly; none in the protocol code)
+- Raw APK contents: `../third-party/apps/CubeSuite_extracted/`
+- Java sources (jadx 1.5.6): `../third-party/apps/CubeSuite_decompiled/sources/com/cubeSuite/` (74 methods failed to decompile cleanly; none in the protocol code)
 
 ## Supported devices (one `communication/*Communication` class each)
 FootCtrl / FootControl2 (FC2), CubeTurner, Looper, LooperDrum, IRBox, SMC Mixer,
@@ -48,7 +48,7 @@ Large transfers are chunked by `CommunicationUtil.splitReadData/splitWriteData`.
 - `readFootCtrlData` → read DEV @ `ADDRESS_BASE`, 1000 bytes → native `dataToFootCtrlEntry`.
 - Bluetooth-pedal mode: read 13 bytes @ base; channel/toggle at `2*i+2` / `2*i+3`; writes at 1 and 12.
 - Other field offsets come from native `libGetOffset.so` (`getFootCtrlAddr(name)`, strcmp chain).
-  Disassembled (arm64, capstone) → `thirdparty/apps/CubeSuite_native/libGetOffset_arm64.asm`.
+  Disassembled (arm64, capstone) → `../third-party/apps/CubeSuite_native/libGetOffset_arm64.asm`.
 
 ### FootCtrl v1 struct (`getFootCtrlSize` = 0x742 = 1858 bytes)
 | Offset | Size | Field |

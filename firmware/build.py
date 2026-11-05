@@ -165,7 +165,7 @@ def build(src_ufw, out_dir, tag, D, F, tapfix=True, version=14, ident='FootCtrlP
 
 if __name__ == '__main__':
     root = os.path.dirname(os.path.abspath(__file__))
-    src = os.path.join(root, '..', 'thirdparty', 'stock_firmware', 'FootCtrlPlus_012.ufw')   # stock build input (vendor)
+    src = os.path.join(root, '..', '..', 'third-party', 'stock_firmware', 'FootCtrlPlus_012.ufw')   # stock build input (vendor)
     out = os.path.join(root, 'out')
     # version scheme: <version><build>, e.g. 141 = version 14, build 1 (3 digits: shown on the display,
     # in the name/version reply and in the .fwsc metadata)

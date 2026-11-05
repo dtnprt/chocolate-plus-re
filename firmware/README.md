@@ -5,12 +5,12 @@ Everything needed to rebuild the custom firmware from the stock image.
 ```
 build.py          patches the stock image and writes out/FootCtrlPlus_141.{fwsc,ufw}
 fwsctool.py       .fwsc/.ufw container, LFSR member cipher, CRC16 (imported by build.py)
-../thirdparty/stock_firmware/FootCtrlPlus_012.ufw - stock Android firmware, the build input (vendor, not in git)
+../../third-party/stock_firmware/FootCtrlPlus_012.ufw - stock Android firmware, the build input (vendor, not in git)
 patch_src/        cave.s + link.ld      - source of the 24-byte tap-fix code cave (pi32v2 asm)
                   greet.s + greet.ld    - boot greeting; asm_greet.sh assembles it (bytes are embedded in build.py)
                   dis.sh                - objdump check of patched images (WSL JieLi toolchain)
 out/              build results; flash the .fwsc with SincoOTA
-../thirdparty/firmware_reference/  correct decryption of the stock app area (vendor code, not in git):
+../../third-party/firmware_reference/  correct decryption of the stock app area (vendor code, not in git):
                   app_area_decrypted.bin (offset 0 = vaddr 0x01e00000), app_code.elf (ET_EXEC @0x01e00120),
                   app_disasm.txt (objdump), app_decompiled.c (Ghidra pseudo-C), app_strings.txt, func_targets.txt
 ```
@@ -42,7 +42,7 @@ Press latency: ~95 ms stock, ~45 ms custom. A+B / C+D combos still work (30 ms w
 - Then: member CRC in the .ufw directory entry, table CRC and header CRC (`fix_header_crc`), `.fwsc` wrap.
 
 ## Flashing / recovery
-Flash `out/*.fwsc` with SincoOTA (Android). Stock recovery: `../thirdparty/stock_firmware/vendor_download/FootCtrlPlus_012.fwsc` with SincoOTA.
+Flash `out/*.fwsc` with SincoOTA (Android). Stock recovery: `../../third-party/stock_firmware/vendor_download/FootCtrlPlus_012.fwsc` with SincoOTA.
 If the pedal is stuck in update/download mode: SincoOTA → *Mandatory upgrade*.
 
 ## Display internals (for further changes)

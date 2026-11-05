@@ -2,7 +2,7 @@
 """Copy the assembled patch bytes from patch_src/greet.elf into the GREET table of build.py.
 
 Run after `asm_greet.sh` (WSL JieLi toolchain):  python -I patch_src/gen_table.py
-Each entry stores the exact stock bytes (from ../thirdparty/firmware_reference/app_area_decrypted.bin) that build.py checks before patching.
+Each entry stores the exact stock bytes (from ../../third-party/firmware_reference/app_area_decrypted.bin) that build.py checks before patching.
 """
 import os, struct
 
@@ -45,7 +45,7 @@ def sections(elf_path):
 
 
 def main():
-    stock = open(os.path.join(ROOT, '..', 'thirdparty', 'firmware_reference', 'app_area_decrypted.bin'), 'rb').read()
+    stock = open(os.path.join(ROOT, '..', '..', 'third-party', 'firmware_reference', 'app_area_decrypted.bin'), 'rb').read()
     lines = []
     for n, addr, code in sections(os.path.join(HERE, 'greet.elf')):
         o = addr - 0x1e00000
