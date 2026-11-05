@@ -10,6 +10,8 @@ FootCtrlPlus_012.fwsc (or the .ufw inside it) - original M-VAVE firmware, the bu
 patch_src/        cave.s + link.ld      - source of the 24-byte tap-fix code cave (pi32v2 asm)
                   greet.s + greet.ld    - boot greeting; asm_greet.sh assembles it (bytes are embedded in build.py)
                   dis.sh                - objdump check of patched images (WSL JieLi toolchain)
+                  JieLi toolchain 2.5.3 (Linux/WSL): https://pkgman.jieliapp.com/s/linux-toolchain, unpack to ~/jltc/
+                  (or set JL_TOOLCHAIN); guide: https://dtnprt.github.io/chocolate/firmware/build/
 ../../third-party/firmware_reference/  correct decryption of the stock app area (vendor code, not in git):
                   app_area_decrypted.bin (offset 0 = vaddr 0x01e00000), app_code.elf (ET_EXEC @0x01e00120),
                   app_disasm.txt (objdump), app_decompiled.c (Ghidra pseudo-C), app_strings.txt, func_targets.txt

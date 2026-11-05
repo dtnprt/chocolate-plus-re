@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 """Copy the assembled patch bytes from patch_src/greet.elf into the GREET table of build.py.
 
-Run after `asm_greet.sh` (WSL JieLi toolchain):  python -I patch_src/gen_table.py
-Each entry stores the exact stock bytes (from ../../third-party/firmware_reference/app_area_decrypted.bin) that build.py checks before patching.
+Run after `asm_greet.sh` (JieLi toolchain, Linux/WSL):
+    python -I patch_src/gen_table.py [FootCtrlPlus_012_app.bin]
+The argument is the decrypted stock app area, written by `python build.py FootCtrlPlus_012.fwsc --extras`
+(default: ../../third-party/firmware_reference/app_area_decrypted.bin, identical content).
+Each entry stores the exact stock bytes that build.py checks before patching.
 """
-import os, struct
+import os, struct, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -45,7 +48,10 @@ def sections(elf_path):
 
 
 def main():
-    stock = open(os.path.join(ROOT, '..', '..', 'third-party', 'firmware_reference', 'app_area_decrypted.bin'), 'rb').read()
+    src = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, '..', '..', 'third-party', 'firmware_reference', 'app_area_decrypted.bin')
+    if not os.path.isfile(src):
+        sys.exit(f'missing {src}\ncreate it with: python build.py FootCtrlPlus_012.fwsc --extras  (-> FootCtrlPlus_012_app.bin)')
+    stock = open(src, 'rb').read()
     lines = []
     for n, addr, code in sections(os.path.join(HERE, 'greet.elf')):
         o = addr - 0x1e00000

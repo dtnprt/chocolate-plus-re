@@ -131,6 +131,7 @@ def greet_texts(scroll, frames, mode_key):
 
 def patch_member(member, D, F, tapfix, ident=None, greeting=None):
     d = bytearray(member_decrypt(member[UBOOT:], KEY, POS))
+    stock_plain = bytes(d)
     assert d[0x30:0x37] == b'app.bin', "unexpected app-area layout"
     # self-test: CRC rebuild must reproduce stock values exactly
     t = bytearray(d); rebuild_area_crcs(t); assert t == d, "CRC chain self-test failed"
@@ -160,7 +161,7 @@ def patch_member(member, D, F, tapfix, ident=None, greeting=None):
     rebuild_area_crcs(d)
     new = member[:UBOOT] + member_decrypt(bytes(d), KEY, POS)
     assert len(new) == len(member)
-    return new, bytes(d)
+    return new, bytes(d), stock_plain
 
 class WrongFile(Exception):
     pass
@@ -198,10 +199,12 @@ def build(stock_ufw, out_dir, tag, D, F, tapfix=True, version=14, ident='FootCtr
         off, size = struct.unpack_from('<II', e, 0x08)
         member = bytes(ufw[off:off+size])
         assert struct.unpack_from('<H', e, 4)[0] == crc16(member), f"{name}: stock chunk CRC mismatch"
-        new, plain = patch_member(member, D, F, tapfix, ident, greeting)
+        new, plain, stock_plain = patch_member(member, D, F, tapfix, ident, greeting)
         ufw[off:off+size] = new
         struct.pack_into('<H', e, 4, crc16(new)); wr(i, e)
         plains[name.decode()] = plain
+        if name == b'flash.bin':
+            stock_app = stock_plain
     assert set(plains) == {'flash.bin', 'flash2.bin'}
     ufw = fix_header_crc(bytes(ufw))
     h = decode_header(ufw); assert h['stored_crc'] == h['calc_crc']
@@ -211,6 +214,8 @@ def build(stock_ufw, out_dir, tag, D, F, tapfix=True, version=14, ident='FootCtr
     if extras:
         open(base + '.ufw', 'wb').write(ufw)
         open(base + '_app.bin', 'wb').write(plains['flash.bin'])   # decrypted app area, for disasm check
+        # decrypted STOCK app area (offset 0 = 0x01e00000): input of patch_src/gen_table.py
+        open(os.path.join(out_dir, 'FootCtrlPlus_012_app.bin'), 'wb').write(stock_app)
     return base
 
 def main():
@@ -218,7 +223,8 @@ def main():
                                              'dtnprt custom firmware.', epilog=f'Original firmware: {STOCK_URL}')
     ap.add_argument('stock', help='the original firmware file FootCtrlPlus_012.fwsc (or the .ufw inside it)')
     ap.add_argument('-o', '--out', default='.', help='output folder (default: current folder)')
-    ap.add_argument('--extras', action='store_true', help='also write the .ufw and the decrypted app area (_app.bin)')
+    ap.add_argument('--extras', action='store_true', help='also write the .ufw, the decrypted patched app area (_app.bin) '
+                    'and the decrypted stock app area FootCtrlPlus_012_app.bin (input of patch_src/gen_table.py)')
     args = ap.parse_args()
 
     try:

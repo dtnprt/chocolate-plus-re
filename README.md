@@ -4,7 +4,6 @@ Modded Firmware for the M-VAVE Chocolate Plus MIDI Controller.
 
 ```
 firmware/     custom firmware build (build.py, patch sources, CHANGELOG.md, README.md)
-restore/      USB restore runbook (tools in ../third-party/restore_kit)
 ```
 
 The website (https://dtnprt.github.io/chocolate/), the Web Bluetooth flasher and the Android app are kept in the
@@ -14,7 +13,7 @@ private parent repository. This repository is meant to live inside it:
 chocolate-re/
   public-repo/   this repository (git@github.com:dtnprt/chocolate-plus-re.git)
   pages/         working copy of the GitHub Pages repo (git@github.com:dtnprt/dtnprt.github.io.git)
-  website/ tools/ flasher/ android/ firmware/   private: website + deploy, flasher, Android app, local firmware builds
+  website/ tools/ flasher/ android/ restore/ firmware/   private: website + deploy, flasher, Android app, stock restore, local builds
   third-party/   vendor apps, SDK + toolchains, stock firmware, decompiled/disassembled material (private)
 ```
 
