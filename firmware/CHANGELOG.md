@@ -84,6 +84,6 @@ Shown on power-on, then the normal screen:
 - **Updating:** use SincoOTA (Bluetooth), with the pedal **not paired** to the phone.
   If it's left in update mode, use SincoOTA's *Mandatory upgrade*.
 - **Recovery:** flash the original `FootCtrlPlus_012.fwsc` (M-VAVE download) with SincoOTA.
-- **Web Bluetooth flasher** (`../flasher/web`): auth and phase 1 work. Reconnecting for phase 2 from Windows is unreliable, so use SincoOTA.
+- **Web Bluetooth flasher** (private, not in this repo): auth and phase 1 work. Reconnecting for phase 2 from Windows is unreliable, so use SincoOTA.
 - **Flash space is almost full.** Only unreferenced functions and 0xff padding are used for new code.
   `0x1e04a84` must never be reused (pairing records).

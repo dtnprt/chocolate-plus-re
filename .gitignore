@@ -9,7 +9,6 @@ firmware/out/
 _archive/
 
 # Build outputs / caches
-android/build/
 __pycache__/
 *.pyc
 
