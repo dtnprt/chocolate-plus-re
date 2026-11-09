@@ -1,16 +1,17 @@
 // FootCtrlPlus display/LED patches (pi32v2).
 //
-// IMPORTANT: 0x1e04a84 (pairing-record function) is NOT free - it is reached indirectly when a BLE bond is
-// stored; using it as a code cave made the pedal crash on pairing (v4). Only use the caves listed here.
+// IMPORTANT: "no reference found" does not mean free. Reached indirectly (function pointers) and NOT free:
+//   0x1e04a84 BLE pairing-record function (v4 crashed on pairing), 0x1e11b06 USB EP0 IN handler (USB broken up
+//   to 141). Only use the caves listed here.
 //
 // Boot greeting: replaces `call 0x1e1286a` (r0 = arg) in the app start routine at 0x1e144ca. Runs in the
 // app task; the display keeps refreshing from the 5 ms hardware timer while we sleep.
-//   1. scroll text (right to left, 1 char per step, 0.25 s per step), e.g. "   dtnPrt   "
-//   2. frames of 3 chars (0.6 s each), e.g. "Uer" "014" "bAt"
+//   1. frames of 3 chars (0.6 s each), e.g. "   " "Uer" "142" "bAt" (since 142 no scrolling and no "dtn" "Prt";
+//      the first frame is blank: the first frame after power-on is not shown correctly)
 //   3. battery percent " NN" / "100"
 //   4. mode key (3 chars from the table, e.g. "nod") and the mode number " NN"
 //   then the original call with the original argument (reloaded from 0x13491).
-// Text table in cave B: <scroll> 0 <frames> 0 <mode key, 3 chars>   (patched by build.py)
+// Text table in cave B: <frames> 0 <mode key, 3 chars>   (patched by build.py)
 //
 // Advanced custom mode (mode 3) bank/switch screen: stock shows "0xy" (2-digit bank, switch letter A-D);
 // both places that draw it call bank_sw(bank, sw) which shows "x-z" (bank digit, '-', switch 1-4).
@@ -31,24 +32,15 @@
     .section .hook,"ax"          // at 0x1e144ca (4 bytes, was: call 0x1e1286a)
     call greet
 
-    .section .cave_d,"ax"        // at 0x1e00406, max 104 bytes (unreferenced function, in use since v3)
+    .section .cave_d,"ax"        // at 0x1e00406, max 104 bytes (stock usr_timer_modify(id, 1000); its only caller
+                                 // @0x1e15b06 in the LRC trim timer ISR is nop'ed by build.py since 142)
     .globl greet
 greet:
     [--sp] = {rets, r6-r4}
     r6 = 0x13490                 // mode byte; +1 = argument of the original call
     r4 = texts
-    r5 = 0x19                    // scroll step: 25 ticks = 0.25 s
-L_scroll:                        // window of 3 chars, advance by 1
-    r0 = b[r4+0x0] (u)
-    r1 = b[r4+0x1] (u)
-    r2 = b[r4+0x2] (u)
-    call show
-    r4 += 0x1
-    r0 = b[r4+0x2] (u)
-    if (r0 != 0x0) goto L_scroll
-    r4 += 0x3                    // skip the last window and the terminator -> frames
-    r5 = 0x3c                    // frames + values: 60 ticks = 0.6 s
-L_frame:
+    r5 = 0x3c                    // 60 ticks = 0.6 s per frame
+L_frame:                         // frames of 3 chars until a 0 byte
     r0 = b[r4+0x0] (u)
     r1 = b[r4+0x1] (u)
     r2 = b[r4+0x2] (u)
@@ -72,18 +64,9 @@ L_end:
     {rets, r6-r4} = [sp++]
     goto orig_call               // original call, returns to the app start routine
 
-    .section .cave_a,"ax"        // at 0x1e11b06, max 68 bytes (unreferenced function, in use since v2)
-bank_sw:                         // r1 = bank (1..6), r2 = switch index (0..3): show "x-z"
-    [--sp] = rets
-    r0 = r1 + 0x30
-    r1 = 0x20                    // middle digit: blank, '-' is OR-ed in below
-    r2 = r2.b0 (u)
-    r2 += 0x31
-    r3 = 0x0
-    call disp3
-    r0 = 0x19494                 // display word
-    [r0+0x0] |= 0x1000           // middle digit segment g = '-'
-    pc = [sp++]
+// show_num lives in cave D, bank_sw in cave B since 142. Up to 141 both were at 0x1e11b06, which is NOT free:
+// it is the stock USB EP0 IN data-stage handler (sends the descriptors during enumeration, reached via a
+// function pointer) -> USB was not detected. 0x1e11b06 is stock again.
 show_num:                        // r0 = 0..199: show " NN" or "1NN" for r5 ticks
     r1 = 0xa
     r2 = r0 / r1 (u)             // tens (0..19)
@@ -142,13 +125,21 @@ bank_now:                        // show "x-z" for the current bank and switch (
     .section .site_pwm,"ax"      // at 0x1e11d78 (stock: b[r14+0x1b] = r1, display digit index), 4 bytes
     call led_pwm
 
-    .section .cave_b,"ax"        // at 0x1e19308, max 32 bytes (0xff padding)
-texts:
-    .ascii "   dtnPrt   "
-    .byte 0
-    .ascii "Uer014bAt"
+    .section .cave_b,"ax"        // at 0x1e19308, max 32 bytes (stock: 0xff initializer of the BLE scheduler
+                                 // 0x1e1cc1c; build.py re-points it to 0x1e00100 since 142)
+texts:                           // max 16 bytes (build.py writes the real table), bank_sw follows
+    .ascii "   Uer142bAt"
     .byte 0
     .ascii "nod"
+
+    .section .cave_b2,"ax"       // at 0x1e19318, 16 bytes (rest of cave B)
+bank_sw:                         // r1 = bank (1..6), r2 = switch index (0..3): show "x-z"
+    r0 = r1 + 0x30
+    r1 = 0x78                    // 'x': its font entry (blank in stock) is patched to '-' (segment g) by build.py
+    r2 = r2.b0 (u)
+    r2 += 0x31
+    r3 = 0x0
+    goto disp3                   // tail call
 
     .section .cave_c,"ax"        // at 0x1e260a0, 16 bytes (rest of the 0xff padding)
 show:                            // disp3(r0, r1, r2), then sleep r5 ticks

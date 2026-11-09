@@ -1,9 +1,9 @@
 # FootCtrlPlus custom firmware – Changelog
 
 Base: stock M-VAVE **FootCtrlPlus 012** (Android build, JieLi AC636N).
-Current: **FootCtrlPlus 141-dtnprt** (version 14, build 1) → `FootCtrlPlus_141-dtnprt.fwsc`, built with `build.py` from the original 012 (flash with SincoOTA).
+Current: **FootCtrlPlus 142-dtnprt** (version 14, build 2) → `FootCtrlPlus_142-dtnprt.fwsc`, built with `build.py` from the original 012 (flash with SincoOTA).
 
-Version scheme: `<version><build>` as 3 digits, e.g. `141` = version 14, build 1. It appears on the display,
+Version scheme: `<version><build>` as 3 digits, e.g. `142` = version 14, build 2. It appears on the display,
 in the name/version reply and in the `.fwsc` metadata.
 
 All changes are binary patches applied by `build.py` to the stock image, in both firmware copies
@@ -11,7 +11,28 @@ All changes are binary patches applied by `build.py` to the stock image, in both
 
 ---
 
-## 141 (version 14, build 1) – current
+## 142 (version 14, build 2) – current
+
+### Fix: USB-MIDI not detected (bug since the first greeting builds, still in 141)
+- In stock firmware the pedal shows up on the computer as the USB-MIDI device `SINCO`. Custom builds up to 141 did not.
+- **Cause:** places used as free space for the patches are in use by the stock firmware:
+  - `0x1e11b06` is the stock USB function that sends the replies (descriptors) to the computer while the device
+    is being detected. It is only reached through a pointer, so it looked unused. The bank screen code was put there
+    (since 014 + greeting v2), so the computer never got an answer. Now it is stock again.
+  - `0x1e00406` is a stock timer function. The LRC clock-trim timer calls it from its interrupt about 200 ms after boot.
+    In 141 that call ran the greeting inside the timer interrupt. Now the call is removed, and the trim timer keeps
+    running every 10 ms instead of switching to 1 s.
+  - `0x1e19308` (the greeting text) is a block of 0xff that the Bluetooth link scheduler copies as start values.
+    In 141 it got the greeting text instead. The scheduler now reads another 32-byte 0xff block (`0x1e00100`).
+- **Boot greeting shorter:** no `dtnPrt` any more (that also made room for the fix). It now starts with a blank screen,
+  then `Uer` `142` `bAt` ` NN` `nod` `  N` (0.6 s each).
+- **No `000` at power-on.** In modes 2 and 3 the stock firmware writes `000` to the display about 5 ms after power-on
+  (and when switching to these modes). That overwrote the first greeting frame. It is blank now. In mode 2 the stock
+  `000` after a footswitch release is unchanged.
+- The `-` of the bank screen now comes from the font: the blank `x` entry was changed to `-`. Stock never shows an `x`.
+- Everything else is the same as 141.
+
+## 141 (version 14, build 1)
 
 ### Footswitches
 - **Faster response.** A press now registers after about **40–45 ms** instead of about **95 ms**.
@@ -56,9 +77,9 @@ Shown on power-on, then the normal screen:
   The LED stays dark while Bluetooth is off. It is not an LED-off switch.
 
 ### Identification
-- **New name/version reply:** the pedal reports `FootCtrlPlus_141-dtnprt` instead of `FootCtrlPlus_012`.
-  - CubeSuite shows it as version `141`.
-  - The web config page shows the full `141-dtnprt`.
+- **New name/version reply:** the pedal reports `FootCtrlPlus_142-dtnprt` instead of `FootCtrlPlus_012`.
+  - CubeSuite shows it as version `142`.
+  - The web config page shows the full `142-dtnprt`.
 - **Bluetooth name unchanged (`FootCtrlPlus`), on purpose.** SincoOTA and CubeSuite only find the pedal by that exact
   name. Renaming it would make SincoOTA unable to flash it, including in update mode.
 
@@ -76,7 +97,8 @@ Shown on power-on, then the normal screen:
 | 014 + greeting v4 | Mode key/value (`nod` + number). Advanced custom screen `x-z`. **Bug:** the pedal crashed when a Bluetooth pairing was stored, because a pairing function had been reused as code space. |
 | 014 + LED dim (v5) | Pairing bug fixed (that function left untouched). Status LED dimmed. |
 | 015 | Version 15. Longer display times: scroll 0.2 → 0.25 s per step, values 0.4 → 0.6 s. Bank number fix (stock bug: shown bank 0 / "-1" after boot). Mode 3 shows the bank screen right after the greeting. |
-| **141** | New version scheme (version 14, build 1); file `FootCtrlPlus_141-dtnprt.fwsc`. First finished release. |
+| 141 | New version scheme (version 14, build 1); file `FootCtrlPlus_141-dtnprt.fwsc`. First finished release. **Bug:** USB-MIDI not detected (stock USB function at 0x1e11b06 overwritten; also: greeting ran in the LRC trim timer interrupt, BLE scheduler start values overwritten). |
+| **142** | USB fix: 0x1e11b06 stock again, the stock timer call and the BLE start values are fixed. Greeting without `dtnPrt`. |
 
 ---
 
@@ -86,4 +108,5 @@ Shown on power-on, then the normal screen:
 - **Recovery:** flash the original `FootCtrlPlus_012.fwsc` (M-VAVE download) with SincoOTA.
 - **Web Bluetooth flasher** (private, not in this repo): auth and phase 1 work. Reconnecting for phase 2 from Windows is unreliable, so use SincoOTA.
 - **Flash space is almost full.** Only unreferenced functions and 0xff padding are used for new code.
-  `0x1e04a84` must never be reused (pairing records).
+  `0x1e04a84` must never be reused (pairing records). `0x1e11b06` (USB), `0x1e00406` and `0x1e19308` were not free either (fixed in 142).
+  Not finding a reference does not prove a location is free.

@@ -4,7 +4,7 @@ Build the dtnprt custom firmware for the M-VAVE Chocolate Plus (FootCtrlPlus) by
 original M-VAVE firmware 012.
 
 Usage:
-    python build.py FootCtrlPlus_012.fwsc            # writes FootCtrlPlus_141-dtnprt.fwsc to the current folder
+    python build.py FootCtrlPlus_012.fwsc            # writes FootCtrlPlus_142-dtnprt.fwsc to the current folder
     python build.py FootCtrlPlus_012.fwsc -o <folder>
 
 The original firmware file is not included here. Download it from M-VAVE:
@@ -46,9 +46,13 @@ STOCK_SHA256 = {
 KNOWN_OTHER = {
     'b5ba2041482640315c7dc70a0f7c79c9e81d24989226763868dc36dab81801c3': 'the original firmware 013',
     'fb479aa2da0efe27e7c92581884171bce0694e41a912a5d755a520129705f837': 'the already patched custom firmware 141',
+    'eadd20b993b149753651f83a683d1af25fb4f966d340e0b269a33b300f2e3ba2': 'the already patched custom firmware 142',
+    'ba558d81118b89708a03b57d91e40c7a7c165331eae88608c699a02fb7d89097': 'a test build of 142 (revision 3)',
+    '9a2956ef84db44d20b20d58bc0a4e306a4c279d9b0cd38b49f3425686c9da3a8': 'a test build of 142 (revision 2)',
+    '15ecc6b70441883c1901ffc81c62ac5ec5085f3d44e913a654251579f9e49d92': 'a test build of 142 (revision 1, USB still broken)',
 }
 # SHA-256 of the result with the settings in main(): shows that a build is identical to the official one.
-EXPECTED_SHA256 = {'FootCtrlPlus_141-dtnprt.fwsc': 'fb479aa2da0efe27e7c92581884171bce0694e41a912a5d755a520129705f837'}
+EXPECTED_SHA256 = {'FootCtrlPlus_142-dtnprt.fwsc': 'eadd20b993b149753651f83a683d1af25fb4f966d340e0b269a33b300f2e3ba2'}
 
 KEY, POS = 0x180f, 0x20000          # correct app-area cipher params
 UBOOT = 0x1000                      # plaintext boot header in front of app area
@@ -83,8 +87,8 @@ IDENT_ADDR = 0x1e18c8e                     # "FootCtrlPlus_012" + NUL pad (27-by
 IDENT_SLOT = 27
 
 # Display patches (source: patch_src/greet.s + greet.ld, assembled with patch_src/asm_greet.sh):
-# - boot greeting: the app start routine's `call 0x1e1286a` @0x1e144ca -> greet(): scroll text (0.2 s/step),
-#   3-char frames (0.4 s), battery percent, mode key + mode number, then the original call.
+# - boot greeting: the app start routine's `call 0x1e1286a` @0x1e144ca -> greet(): 3-char frames (0.6 s),
+#   battery percent, mode key + mode number, then the original call.
 # - advanced custom mode (3): bank/switch screen "0xy" (bank, switch A-D) -> "x-z" (bank, '-', switch 1-4).
 # - status LED (PA0) dimmed: 'on' = input with internal pull-up instead of output high.
 # (address, exact stock bytes that must be there, new bytes)
@@ -93,10 +97,8 @@ IDENT_SLOT = 27
 GREET = [
     (0x1e144ca, bytes.fromhex('bfeacef1'),  # hook: was `call 0x1e1286a`
      bytes.fromhex('bfea9c5f')),
-    (0x1e00406, bytes.fromhex('7904041680ea274a4520bfeadafe0816c9ffa0930100049f50a3901806e1d8026716776006e81670786e84e8fa01706660e17f0440e17a0ff06690ea0de100e1e803f06550ec700080ea094a70166116bfeaeafec52185f8df0538ece803'),  # cave D: greeting (unreferenced 104 B function, used since v3)
-     bytes.fromhex('7604c6ff90340100c4ff0893e1014539484049414a4281ea402e4c814842f0584c834d3c484049414a4281ea362e4c834840f05880ea317080ea718b484149424a4381ea2a2e684080ea698b684080f8020680ea909768413604c0ea0392')),
-    (0x1e11b06, bytes.fromhex('75040416bfea31f850e81b0a4d61055635e94000552052d641624020bfeacdf768e808454861081f81d7c861814350ee4501004440223504ffeaf3f7619e4020'),  # cave A: bank_sw() + show_num() (unreferenced 68 B function, used since v2)
-     bytes.fromhex('100400e1301049202217ca31432080eaef03c0ff9494010000ef800d0004412af4e100212316131b8b1e482082f902144831fa3601e1302002e13030c0eaada2')),
+    (0x1e00406, bytes.fromhex('7904041680ea274a4520bfeadafe0816c9ffa0930100049f50a3901806e1d8026716776006e81670786e84e8fa01706660e17f0440e17a0ff06690ea0de100e1e803f06550ec700080ea094a70166116bfeaeafec52185f8df0538ece803'),  # cave D: greet() + show_num() (104 B stock usr_timer_modify(id, 1000); its only caller is removed below)
+     bytes.fromhex('7604c6ff90340100c4ff0893e1014d3c484049414a4281ea402e4c834840f05880ea3b700190484149424a4381ea352e68400189684080f8020680ea9c9768413604c0ea0f92412af4e100212316131b8b1e482082f902144831fa3601e1302002e13030c1ea192e')),
     (0x1e1305a, bytes.fromhex('c0ffa093010050ee0a12402af4e1103000e13030e3e10a30991e41e13010d22122174320bfea'),  # mode 3 screen #1 block: call bank_now + led_on (OUT only) + led_pwm
      bytes.fromhex('80ea8f01c0ea100000ef0100ffeac6fc52eeeb11c0ff00501e0002ef01008142c2ef01008000')),
     (0x1e13322, bytes.fromhex('30e1ff4f'),  # bank down: shown bank = new index + 1 (stock: shown bank - 1 -> 255 after boot)
@@ -104,28 +106,52 @@ GREET = [
     (0x1e13346, bytes.fromhex('4881'),  # bank up: shown bank = new index + 1 (stock: shown bank + 1)
      bytes.fromhex('3881')),
     (0x1e13370, bytes.fromhex('402af4e1304000e13040d121'),  # mode 3 bank/switch screen #2: call bank_sw
-     bytes.fromhex('12163116bfeac7f3c0ea0900')),
+     bytes.fromhex('1216311680ead02fc0ea0900')),
     (0x1e1337c, bytes.fromhex('1217e1e10a40391e41e130104320bfea'),  # rest of stock block #2 (skipped): bank_now()
-     bytes.fromhex('c3ffe890010039403a461981ffeabdf3')),
+     bytes.fromhex('c3ffe890010039403a461981c0eac62f')),
     (0x1e129ee, bytes.fromhex('00ef0100'),  # status LED (PA0) on -> led_on (OUT = 1, DIR left to led_pwm)
      bytes.fromhex('c0ea3803')),
     (0x1e11d78, bytes.fromhex('52eeeb11'),  # 5 ms display timer digit store -> led_pwm (PA0 output only in digit slot 0 = 1/3 duty)
      bytes.fromhex('80ea7709')),
     (0x1e260a0, bytes.fromhex('ffffffffffffffffffffffffffffffff'),  # cave C: show() = disp3 + os_time_dly(r5) (0xff padding)
      bytes.fromhex('43201004bfea276150168804d7ea648e')),
+    (0x1e19318, b'\xff' * 16,  # cave B, 2nd half: bank_sw() shows "x-z" (moved here from 0x1e11b06 in 142)
+     bytes.fromhex('00e1301059382217ca314320ffeae7c7')),
+    (0x1e18c8b, bytes.fromhex('00'),  # font: 'x'/'X' (blank in stock, never shown) -> '-' (segment g), used by bank_sw
+     bytes.fromhex('10')),
+    # mode 2/3 screen functions (called by the 5 ms poll when the mode changes, also once ~5 ms after power-on)
+    # only write "000" to the display; that overwrote the first greeting frame. Now they write blank.
+    (0x1e13a84, bytes.fromhex('c1ffcfcfcf00'),  # mode 2 screen: r1 = 0xcfcfcf ("000") -> 0 (blank)
+     bytes.fromhex('c1ff00000000')),
+    (0x1e13aa0, bytes.fromhex('c1ffcfcfcf00'),  # mode 3 screen: r1 = 0xcfcfcf ("000") -> 0 (blank)
+     bytes.fromhex('c1ff00000000')),
+    # 0x1e11b06 (cave A up to 141: bank_sw + show_num) is NOT free: it is the stock USB EP0 IN data-stage handler
+    # (sends the descriptors during enumeration, reached via a function pointer). Overwriting it is why USB was
+    # not detected up to 141. Since 142 it stays stock; show_num moved to cave D, bank_sw to cave B.
+    # Fixes for two more caves that are NOT free in stock:
+    # - cave D (0x1e00406) is stock usr_timer_modify(id, 1000 ms), called by the LRC trim timer ISR 0x1e15a40
+    #   after 20 samples (~200 ms after boot). In 141 that call ran greet() inside the timer interrupt
+    #   (os_time_dly in ISR context). Now the call is removed: the LRC trim keeps its 10 ms period.
+    (0x1e15b06, bytes.fromhex('bfea7e54'),  # LRC trim timer: `call 0x1e00406` -> nop nop (same 4-byte if-block)
+     bytes.fromhex('00000000')),
+    # - cave B (0x1e19308) is the 8 x 0xffffffff initializer of a local array in the BLE link scheduler
+    #   0x1e1cc1c (`r1 = 0x1e19308`, copied with rep 4x8). Point it at the empty 32-byte directory slot
+    #   0x1e00100 (0xff, never written), the greeting texts stay at 0x1e19308.
+    (0x1e1cc26, bytes.fromhex('0893e101'),  # imm32 of `r1 = 0x1e19308` @0x1e1cc24 -> 0x1e00100
+     bytes.fromhex('0001e001')),
 ]
-TEXT_TABLE = 0x1e19308               # cave B: 32 bytes of 0xff padding
-TEXT_TABLE_MAX = 32
+FF_INIT = 0x1e00100                  # 32 bytes of 0xff (empty flash-directory slot): BLE scheduler initializer
+TEXT_TABLE = 0x1e19308               # cave B: 32 bytes of 0xff in stock (BLE initializer, re-pointed to FF_INIT)
+TEXT_TABLE_MAX = 16                  # first half of cave B; bank_sw() lives in the second half
 DISPLAYABLE = set('0123456789ABCDEFGHIJLNOPQRSTUYabcdefghijlnopqrstuy ')
 
-def greet_texts(scroll, frames, mode_key):
-    """Text table for greet(): scroll text, 0, frames (3 chars each), 0, mode key (3 chars)."""
-    assert len(scroll) >= 4, 'scroll text needs at least 4 characters'
+def greet_texts(frames, mode_key):
+    """Text table for greet(): frames (3 chars each), 0, mode key (3 chars)."""
     assert frames and all(len(f) == 3 for f in frames), 'frames must be 3 characters each'
     assert len(mode_key) == 3, 'mode key must be 3 characters'
-    s = scroll + ''.join(frames) + mode_key
+    s = ''.join(frames) + mode_key
     assert all(c in DISPLAYABLE for c in s), f'not displayable on the 7-segment font: {s!r}'
-    t = scroll.encode('ascii') + bytes(1) + ''.join(frames).encode('ascii') + bytes(1) + mode_key.encode('ascii')
+    t = ''.join(frames).encode('ascii') + bytes(1) + mode_key.encode('ascii')
     assert len(t) <= TEXT_TABLE_MAX, f'texts too long ({len(t)} > {TEXT_TABLE_MAX} bytes)'
     return t
 
@@ -149,15 +175,16 @@ def patch_member(member, D, F, tapfix, ident=None, greeting=None):
         assert len(raw) < IDENT_SLOT, "ident too long"
         d[o:o+IDENT_SLOT] = raw + bytes(1) * (IDENT_SLOT - len(raw))
     if greeting:
+        assert d[a(FF_INIT):a(FF_INIT) + 32] == b'\xff' * 32, "0xff initializer slot not empty"
         for addr, stock, new in GREET:
             o = a(addr)
             assert d[o:o+len(stock)] == stock, f"greeting: unexpected stock bytes at {addr:#x}"
             d[o:o+len(new)] = new
-        scroll, frames, mode_key = greeting
-        t = greet_texts(scroll, frames, mode_key)
+        frames, mode_key = greeting
+        t = greet_texts(frames, mode_key)
         o = a(TEXT_TABLE)
         assert d[o:o+TEXT_TABLE_MAX] == bytes([0xff]) * TEXT_TABLE_MAX, "text table area not empty"
-        d[o:o+len(t)] = t
+        d[o:o+TEXT_TABLE_MAX] = t + b'\xff' * (TEXT_TABLE_MAX - len(t))
     rebuild_area_crcs(d)
     new = member[:UBOOT] + member_decrypt(bytes(d), KEY, POS)
     assert len(new) == len(member)
@@ -187,7 +214,7 @@ def load_stock(path):
                     f'  The file may be incomplete, damaged, or a different firmware version.')
 
 def build(stock_ufw, out_dir, tag, D, F, tapfix=True, version=14, ident='FootCtrlPlus_014-dtnprt', greeting=None,
-          suffix='', extras=False):
+          suffix='', extras=False, revision=None):
     ufw = bytearray(stock_ufw)
     cnt = decode_header(ufw)['count']
     def rd(i): return bytearray(xcode_block(bytes(ufw[0x40+i*0x50:0x40+(i+1)*0x50])))
@@ -209,6 +236,10 @@ def build(stock_ufw, out_dir, tag, D, F, tapfix=True, version=14, ident='FootCtr
     ufw = fix_header_crc(bytes(ufw))
     h = decode_header(ufw); assert h['stored_crc'] == h['calc_crc']
     os.makedirs(out_dir, exist_ok=True)
+    # revision: FootCtrlPlus_142-dtnprt-<rev>. The "FootCtrlPlus_<version>" prefix must stay: SincoOTA descrambles the
+    # 20 metadata bytes ("<name>_<version><suffix>", cut to 20) using the length of the file name (see fwsc_wrap).
+    if revision is not None:
+        suffix = f'{suffix}-{revision}'
     base = os.path.join(out_dir, f'FootCtrlPlus_{version:03d}{suffix}' + (f'_{tag}' if tag else ''))
     open(base + '.fwsc', 'wb').write(fwsc_wrap(ufw, 'FootCtrlPlus', version, suffix))
     if extras:
@@ -225,7 +256,15 @@ def main():
     ap.add_argument('-o', '--out', default='.', help='output folder (default: current folder)')
     ap.add_argument('--extras', action='store_true', help='also write the .ufw, the decrypted patched app area (_app.bin) '
                     'and the decrypted stock app area FootCtrlPlus_012_app.bin (input of patch_src/gen_table.py)')
+    ap.add_argument('--rev-file', metavar='FILE', help='development builds: read the last revision number from FILE, '
+                    'add 1, write it back and name the output FootCtrlPlus_<version>-dtnprt-<revision>.fwsc')
     args = ap.parse_args()
+    revision = None
+    if args.rev_file:
+        try:
+            revision = int(open(args.rev_file).read().strip() or 0) + 1
+        except FileNotFoundError:
+            revision = 1
 
     try:
         stock = load_stock(args.stock)
@@ -234,20 +273,22 @@ def main():
         return 1
     print(f'OK: {os.path.basename(args.stock)} is the original firmware 012')
 
-    # version scheme: <version><build>, e.g. 141 = version 14, build 1 (3 digits: shown on the display,
+    # version scheme: <version><build>, e.g. 142 = version 14, build 2 (3 digits: shown on the display,
     # in the name/version reply and in the .fwsc metadata)
-    VERSION = 141
-    # boot greeting: SCROLL slides in from the right (0.2 s per step), then the FRAMES (0.4 s each),
-    # then the battery percent. Blanks around SCROLL make it enter and leave the display completely.
-    # The font has no K M V W X Z ("U" stands in for V); B and T show as b and t.
-    SCROLL = '   dtnPrt   '
-    FRAMES = ['Uer', f'{VERSION:03d}', 'bAt']
+    VERSION = 142
+    # boot greeting: FRAMES of 3 characters (0.6 s each), then the battery percent, MODE_KEY and the mode number.
+    # The first frame is blank: start-up screen blank (the mode 2/3 "000" that used to overwrite it is patched out).
+    # No "dtn"/"Prt" since 142. The font has no K M V W X Z ("U" stands in for V).
+    FRAMES = ['   ', 'Uer', f'{VERSION:03d}', 'bAt']
     MODE_KEY = 'nod'              # shown before the mode number (no M on 7 segments)
-    GREETING = (SCROLL, FRAMES, MODE_KEY)
+    GREETING = (FRAMES, MODE_KEY)
     # footswitch timing: debounce D=3, combo window F=6 ticks of 5 ms (~40-45 ms press latency, 30 ms combo window)
-    SUFFIX = '-dtnprt'            # file name / .fwsc metadata: FootCtrlPlus_141-dtnprt.fwsc
+    SUFFIX = '-dtnprt'            # file name / .fwsc metadata: FootCtrlPlus_142-dtnprt.fwsc
     base = build(stock, args.out, '', D=3, F=6, version=VERSION, ident=f'FootCtrlPlus_{VERSION:03d}{SUFFIX}',
-                 greeting=GREETING, suffix=SUFFIX, extras=args.extras)
+                 greeting=GREETING, suffix=SUFFIX, extras=args.extras, revision=revision)
+    if args.rev_file:
+        open(args.rev_file, 'w').write(f'{revision}' + chr(10))
+        print(f'revision {revision} (saved in {args.rev_file})')
 
     out = base + '.fwsc'
     digest = hashlib.sha256(open(out, 'rb').read()).hexdigest()
