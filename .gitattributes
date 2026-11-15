@@ -4,3 +4,8 @@
 tools/hooks/*   text eol=lf
 # Windows batch files
 *.bat           text eol=crlf
+
+# Keep hashed extension sources identical in Windows and WSL.
+firmware/patch_src/sysex_split.*       text eol=lf
+firmware/patch_src/sysex_split_glue.S  text eol=lf
+firmware/patch_src/test_sysex_split.c  text eol=lf

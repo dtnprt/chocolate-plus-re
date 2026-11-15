@@ -1,5 +1,9 @@
 # FootCtrlPlus custom firmware build
 
+An experimental [143-split candidate](SYSEX_SPLIT.md) separates complete HOST
+SysEx messages into different USB transfers without an added delay. It is built
+with `split_143.py` after reproducing 142; the default build below is unchanged.
+
 Everything needed to rebuild the custom firmware from the stock image.
 
 ```
