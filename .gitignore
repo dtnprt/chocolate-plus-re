@@ -18,3 +18,10 @@ firmware/patch_src/*.elf
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# E/F build outputs (firmware/ef/build.sh)
+firmware/ef/out/
+firmware/ef/*.elf
+firmware/ef/*.syms
+firmware/ef/*.dis
+firmware/ef/sec_*.bin

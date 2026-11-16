@@ -29,3 +29,8 @@ Three digits `<version><build>`, numbers only (SincoOTA/CubeSuite parse digits).
 - **Release** versions have an **even** version number: 140â€“149, then 160â€“169, 180â€“189 â€¦
 - **Dev** versions have an **odd** version number: 150â€“159, then 170â€“179, 190â€“199 â€¦
 - The last digit is the build. After x9 the next number of the same kind follows (149 -> 160, 159 -> 170).
+
+## Fork additions
+
+- `firmware/ef/`: firmware 152-ef (A+B / C+D as switches E/F, power-on mode selection). See its README.
+- `webconfig/`: Web Config with E/F toggles, a power-on mode map, and configuration over USB-MIDI (SysEx).
